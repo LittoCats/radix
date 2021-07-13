@@ -1,11 +1,13 @@
 /*******************************************************************************
  * @author      : 程巍巍 (littocats@gmail.com)
- * @created     : 星期二 7月 13, 2021 15:02:39 CST
+ * @created     : Tuesday Jul 13, 2021 22:36:35 CST
  *
- * @description : index.spec
+ * @description : result.spec
  *
  ******************************************************************************/
 
-test("initialize", () => {
-  console.log("Success");
+import { Node } from '../index';
+
+it('', ()=> {
+  expect(true).toBe(true);
 });

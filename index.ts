@@ -20,34 +20,52 @@ export class SharedKeyError extends Error {
   }
 }
 
-enum Kind {
+export enum Kind {
   Normal,
   Named,
   Glob,
 }
 
 export class Node<T> {
-  static Kind = { Normal: Kind.Normal, Named: Kind.Named, Glob: Kind.Glob };
+  static Kind = Kind;
 
-  readonly placeholder: boolean;
-  readonly children: Node<T>[] = [];
+  private value = {
+    placeholder: false as boolean,
+    children: [] as Array<Node<T>>,
+    priority: null as number | null,
+    payload: null as T | null,
+    kind: Kind.Normal as Kind,
+    key: null as string | null
+  };
 
-  private _payload?: T;
-  get payload() {
-    return this._payload;
-  }
-  set payload(payload) {
-    this._payload = payload;
+  public get placeholder(): boolean {
+    return this.value.placeholder;
   }
 
-  private _key: string;
-  get key(): string {
-    return this._key;
+  public get payload(): T | null {
+    return this.value.payload;
   }
-  set key(key) {
-    this._key = key;
-    this._kind = Kind.Normal;
-    this._priority = undefined;
+  public set payload(payload) {
+    this.value.payload = payload;
+  }
+
+  public get key(): string {
+    return this.value.key;
+  }
+
+  public set key(key) {
+    this.value.key = key;
+    this.value.kind = Kind.Normal;
+    this.value.priority = null;
+    this.value.priority = this.priority;
+  }
+
+  public get kind(): Kind {
+    return this.value.kind;
+  }
+
+  public get children(): Array<Node<T>> {
+    return this.value.children;
   }
 
   /**
@@ -71,29 +89,22 @@ export class Node<T> {
    * ```
    */
   get priority(): number {
-    if (undefined != this._priority) return this._priority;
+    if (null !== this.value.priority) return this.value.priority;
     let index = 0;
     while (index < this.key.length) {
       const char = this.key[index];
       if (char === "*") {
-        this._kind = Kind.Glob;
+        this.value.kind = Kind.Glob;
         break;
       } else if (char === ":") {
-        this._kind = Kind.Named;
+        this.value.kind = Kind.Named;
         break;
       } else {
         index++;
       }
     }
-    return index;
+    return this.value.priority = index;
   }
-
-  private _priority?: number;
-
-  get kind() {
-    return this._kind;
-  }
-  private _kind: Kind = Kind.Normal;
 
   /**
    * Returns `true` if the node key contains a named parameter in it
@@ -107,7 +118,7 @@ export class Node<T> {
    * ```
    */
   get isNamed() {
-    return Kind.Named === this._kind;
+    return Kind.Named === this.value.kind;
   }
 
   /**
@@ -123,7 +134,7 @@ export class Node<T> {
    * ```
    */
   get isNormal() {
-    return Kind.Normal === this._kind;
+    return Kind.Normal === this.value.kind;
   }
 
   /**
@@ -139,17 +150,19 @@ export class Node<T> {
    * ```
    */
   get isGlob() {
-    return Kind.Glob === this._kind;
+    return Kind.Glob === this.value.kind;
   }
 
-  constructor(key: string, payload?: T, placeholder = false) {
-    this._key = key;
-    this.payload = payload;
-    this.placeholder = placeholder;
+  constructor(key: string, payload: T = null, placeholder = false) {
+    this.value.key = key;
+    if (this.priority >= 0) {
+      this.value.payload = payload;
+      this.value.placeholder = placeholder;
+    }
   }
 
   sort() {
-    this.children.sort(Node.Comparetor);
+    this.value.children.sort(Node.Comparetor);
   }
 
   static Comparetor(left: Node<any>, right: Node<any>): CompareResult {
@@ -164,14 +177,7 @@ export class Node<T> {
   }
 
   toJSON(): any {
-    return {
-      key: this.key,
-      payload: this.payload,
-      kind: this.kind,
-      priority: this.priority,
-      place_holder: this.placeholder,
-      children: this.children.map((children) => children.toJSON()),
-    };
+    return this.value;
   }
 }
 
