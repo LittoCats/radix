@@ -1,0 +1,30 @@
+{
+  "name": "radix",
+  "version": "0.0.1",
+  "description": "[Radix tree](https://en.wikipedia.org/wiki/Radix_tree) implementation for nodejs",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "keywords": [
+    "radix",
+    "tree"
+  ],
+  "author": "程巍巍",
+  "license": "WTFPL",
+  "devDependencies": {
+    "@babel/node": "^7.14.7",
+    "@babel/preset-env": "^7.14.7",
+    "@babel/preset-typescript": "^7.14.5",
+    "@types/eslint": "^7.28.0",
+    "@types/jest": "^26.0.24",
+    "@types/node": "^16.3.1",
+    "@typescript-eslint/eslint-plugin": "^4.28.3",
+    "@typescript-eslint/parser": "^4.28.3",
+    "eslint": "^7.30.0",
+    "eslint-config-prettier": "^8.3.0",
+    "jest": "^27.0.6",
+    "prettier": "2.3.2",
+    "typescript": "^4.3.5"
+  }
+}
