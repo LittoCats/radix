@@ -29,13 +29,20 @@ export enum Kind {
 export class Node<T> {
   static Kind = Kind;
 
-  private value = {
-    placeholder: false as boolean,
-    children: [] as Array<Node<T>>,
-    priority: null as number | null,
-    payload: null as T | null,
-    kind: Kind.Normal as Kind,
-    key: null as string | null
+  private value: {
+    placeholder: boolean;
+    children: Node<T>[];
+    priority: number;
+    payload: T | null;
+    kind: Kind;
+    key: string;
+  } = {
+    placeholder: false,
+    children: [],
+    priority: 0,
+    payload: null,
+    kind: Kind.Normal,
+    key: "",
   };
 
   public get placeholder(): boolean {
@@ -56,8 +63,22 @@ export class Node<T> {
   public set key(key) {
     this.value.key = key;
     this.value.kind = Kind.Normal;
-    this.value.priority = null;
-    this.value.priority = this.priority;
+    this.value.priority = 0;
+
+    let index = 0;
+    while (index < this.key.length) {
+      const char = this.key[index];
+      if (char === "*") {
+        this.value.kind = Kind.Glob;
+        break;
+      } else if (char === ":") {
+        this.value.kind = Kind.Named;
+        break;
+      } else {
+        index++;
+      }
+    }
+    this.value.priority = index;
   }
 
   public get kind(): Kind {
@@ -89,21 +110,7 @@ export class Node<T> {
    * ```
    */
   get priority(): number {
-    if (null !== this.value.priority) return this.value.priority;
-    let index = 0;
-    while (index < this.key.length) {
-      const char = this.key[index];
-      if (char === "*") {
-        this.value.kind = Kind.Glob;
-        break;
-      } else if (char === ":") {
-        this.value.kind = Kind.Named;
-        break;
-      } else {
-        index++;
-      }
-    }
-    return this.value.priority = index;
+    return this.value.priority;
   }
 
   /**
@@ -153,27 +160,24 @@ export class Node<T> {
     return Kind.Glob === this.value.kind;
   }
 
-  constructor(key: string, payload: T = null, placeholder = false) {
-    this.value.key = key;
-    if (this.priority >= 0) {
-      this.value.payload = payload;
-      this.value.placeholder = placeholder;
-    }
+  constructor(key: string, payload: T | null = null, placeholder = false) {
+    this.key = key;
+    this.value.payload = payload;
+    this.value.placeholder = placeholder;
   }
 
   sort() {
-    this.value.children.sort(Node.Comparetor);
+    this.value.children.sort(Node.Comparator);
   }
 
-  static Comparetor(left: Node<any>, right: Node<any>): CompareResult {
-    const result: CompareResult =
-      left.kind < right.kind ? -1 : left.kind === right.kind ? 0 : 1;
-    if (result !== 0) return result;
+  static Comparator(left: Node<any>, right: Node<any>): CompareResult {
+    if (left.kind !== right.kind) return left.kind < right.kind ? -1 : 1;
+
     return left.priority < right.priority
-      ? -1
+      ? 1
       : left.priority === right.priority
       ? 0
-      : 1;
+      : -1;
   }
 
   toJSON(): any {
