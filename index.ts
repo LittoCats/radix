@@ -222,7 +222,7 @@ export class Result<T> {
    # ```
    */
   get isFound(): boolean {
-    return this._payload === undefined;
+    return this._payload !== undefined;
   }
 
   /**
