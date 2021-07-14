@@ -244,75 +244,75 @@ export class Result<T> {
   }
 }
 
-class RadixTree<T> {
+export class Tree<T> {
   private _root: Node<T> = new Node<T>("", undefined, true);
   get root(): Node<T> {
     return this._root;
   }
 
   /**
-   # Inserts given *path* into the Tree
-   #
-   # * *path* - An `String` representing the pattern to be inserted.
-   # * *payload* - Required associated element for this path.
-   #
-   # If no previous elements existed in the Tree, this will replace the
-   # defined placeholder.
-   #
-   # ```
-   # tree = Radix::Tree(Symbol).new
-   #
-   # # /         (:root)
-   # tree.add "/", :root
-   #
-   # # /         (:root)
-   # # \-abc     (:abc)
-   # tree.add "/abc", :abc
-   #
-   # # /         (:root)
-   # # \-abc     (:abc)
-   # #     \-xyz (:xyz)
-   # tree.add "/abcxyz", :xyz
-   # ```
-   #
-   # Nodes inside the tree will be adjusted to accommodate the different
-   # segments of the given *path*.
-   #
-   # ```
-   # tree = Radix::Tree(Symbol).new
-   #
-   # # / (:root)
-   # tree.add "/", :root
-   #
-   # # /                   (:root)
-   # # \-products/:id      (:product)
-   # tree.add "/products/:id", :product
-   #
-   # # /                    (:root)
-   # # \-products/
-   # #           +-featured (:featured)
-   # #           \-:id      (:product)
-   # tree.add "/products/featured", :featured
-   # ```
-   #
-   # Catch all (globbing) and named parameters *path* will be located with
-   # lower priority against other nodes.
-   #
-   # ```
-   # tree = Radix::Tree(Symbol).new
-   #
-   # # /           (:root)
-   # tree.add "/", :root
-   #
-   # # /           (:root)
-   # # \-*filepath (:all)
-   # tree.add "/*filepath", :all
-   #
-   # # /           (:root)
-   # # +-about     (:about)
-   # # \-*filepath (:all)
-   # tree.add "/about", :about
-   # ```
+   * Inserts given *path* into the Tree
+   *
+   * * *path* - An `String` representing the pattern to be inserted.
+   * * *payload* - Required associated element for this path.
+   *
+   * If no previous elements existed in the Tree, this will replace the
+   * defined placeholder.
+   *
+   * ```
+   * tree = Radix::Tree(Symbol).new
+   *
+   * # /         (:root)
+   * tree.add "/", :root
+   *
+   * # /         (:root)
+   * # \-abc     (:abc)
+   * tree.add "/abc", :abc
+   *
+   * # /         (:root)
+   * # \-abc     (:abc)
+   * #     \-xyz (:xyz)
+   * tree.add "/abcxyz", :xyz
+   * ```
+   *
+   * Nodes inside the tree will be adjusted to accommodate the different
+   * segments of the given *path*.
+   *
+   * ```
+   * tree = Radix::Tree(Symbol).new
+   *
+   * # / (:root)
+   * tree.add "/", :root
+   *
+   * # /                   (:root)
+   * # \-products/:id      (:product)
+   * tree.add "/products/:id", :product
+   *
+   * # /                    (:root)
+   * # \-products/
+   * #           +-featured (:featured)
+   * #           \-:id      (:product)
+   * tree.add "/products/featured", :featured
+   * ```
+   *
+   * Catch all (globbing) and named parameters *path* will be located with
+   * lower priority against other nodes.
+   *
+   * ```
+   * tree = Radix::Tree(Symbol).new
+   *
+   * # /           (:root)
+   * tree.add "/", :root
+   *
+   * # /           (:root)
+   * # \-*filepath (:all)
+   * tree.add "/*filepath", :all
+   *
+   * # /           (:root)
+   * # +-about     (:about)
+   * # \-*filepath (:all)
+   * tree.add "/about", :about
+   * ```
    */
   public add(path: string, payload: T) {
     const root = this._root;
@@ -380,6 +380,10 @@ class RadixTree<T> {
       newNode.children.push(...node.children);
 
       // # clear payload and children (this is no longer and endpoint)
+      node.payload = null;
+      node.children.splice(0, node.children.length);
+
+      // adjust existing node key to new partial one
       node.key = path.slice(0, index);
       node.children.push(newNode);
       node.sort();
@@ -391,7 +395,7 @@ class RadixTree<T> {
         node.sort();
 
         // clear payload (no endpoint)
-        node.payload = undefined;
+        node.payload = null;
       } else {
         // this is an endpoint, set payload
         node.payload = payload;
@@ -433,20 +437,20 @@ class RadixTree<T> {
   }
 
   /**
-   # Internal: Compares *path* against *key* for equality until one of the
-   # following criterias is met:
-   #
-   # - End of *path* or *key* is reached.
-   # - A separator (`/`) is found.
-   # - A named parameter (`:`) or catch all (`*`) is found.
-   # - A character in *path* differs from *key*
-   #
-   # ```
-   # _shared_key?("foo", "bar")         # => false (mismatch at 1st character)
-   # _shared_key?("foo/bar", "foo/baz") # => true (only `foo` is compared)
-   # _shared_key?("zipcode", "zip")     # => true (only `zip` is compared)
-   # _shared_key?("s", "/new")          # => false (1st character is a separator)
-   # ```
+   // Internal: Compares *path* against *key* for equality until one of the
+   // following criterias is met:
+   //
+   // - End of *path* or *key* is reached.
+   // - A separator (`/`) is found.
+   // - A named parameter (`:`) or catch all (`*`) is found.
+   // - A character in *path* differs from *key*
+   //
+   // ```
+   // _shared_key?("foo", "bar")         # => false (mismatch at 1st character)
+   // _shared_key?("foo/bar", "foo/baz") # => true (only `foo` is compared)
+   // _shared_key?("zipcode", "zip")     # => true (only `zip` is compared)
+   // _shared_key?("s", "/new")          # => false (1st character is a separator)
+   // ```
    */
   private isSharedKey(path: string, key: string): boolean {
     let index = 0;
@@ -495,4 +499,8 @@ class RadixTree<T> {
   }
 }
 
-export default class Radix<T> extends RadixTree<T> {}
+export default class Radix<T> extends Tree<T> {
+  static Tree = Tree;
+  static Node = Node;
+  static Result = Result;
+}
