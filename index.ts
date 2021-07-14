@@ -26,6 +26,55 @@ export enum Kind {
   Glob,
 }
 
+export class Reader {
+  readonly _value: string;
+  private _position: number;
+
+  constructor(value: string) {
+    this._value = value;
+    this._position = 0;
+  }
+
+  public get hasNext(): boolean {
+    return this._position < this._value.length;
+  }
+
+  public next(): string {
+    return this._value[this._position++];
+  }
+
+  public get current(): string {
+    return this._value[this._position];
+  }
+
+  public get peekNext(): string {
+    return this._value[this._position + 1];
+  }
+
+  public get position() {
+    return this._position;
+  }
+  public set position(pos) {
+    this._position = Math.max(0, Math.min(pos, this._value.length));
+  }
+
+  public get value() {
+    return this._value;
+  }
+
+  public slice(offset?: number, size?: number) {
+    const start: number | undefined = offset;
+    let end: number | undefined = undefined;
+    if (start !== undefined && size !== undefined) end = start + size;
+
+    return this._value.slice(start, end);
+  }
+
+  public get size() {
+    return this._value.length;
+  }
+}
+
 export class Node<T> {
   static Kind = Kind;
 
@@ -404,6 +453,180 @@ export class Tree<T> {
   }
 
   /**
+   * Returns a `Result` instance after walking the tree looking up for
+   * *path*
+   *
+   * It will start walking the tree from the root node until a matching
+   * endpoint is found (or not).
+   *
+   * ```
+   * tree = Radix::Tree(Symbol).new
+   * tree.add "/about", :about
+   *
+   * result = tree.find "/products"
+   * result.found?
+   * # => false
+   *
+   * result = tree.find "/about"
+   * result.found?
+   * # => true
+   *
+   * result.payload
+   * # => :about
+   * ```
+   */
+  public find(path: string): Result<T> {
+    const result = new Result<T>();
+    const root = this.root;
+    // walk the tree from root (first time)
+    this._find(path, result, root, true);
+    return result;
+  }
+
+  private _find(path: string, result: Result<T>, node: Node<T>, first = false) {
+    // special consideration when comparing the first node vs. others
+    // in case of node key and path being the same, return the node
+    // instead of walking character by character
+    if (first && path === node.key && node.payload !== null) {
+      result.use(node);
+      return;
+    }
+
+    const keyReader = new Reader(node.key);
+    const pathReader = new Reader(path);
+
+    // walk both path and key while both have characters and they continue
+    // to match. Consider as special cases named parameters and catch all
+    // rules.
+    while (
+      keyReader.hasNext &&
+      pathReader.hasNext &&
+      (keyReader.current === "*" ||
+        keyReader.current === ":" ||
+        pathReader.current === keyReader.current)
+    ) {
+      switch (keyReader.current) {
+        case "*": {
+          // deal with catch all (globbing) parameter
+          // extract parameter name from key (exclude *) and value from path
+          const name = keyReader.slice(keyReader.position + 1);
+          const value = pathReader.slice(pathReader.position);
+          // add this to result
+          result.params[name] = value;
+          result.use(node);
+          return;
+        }
+        case ":": {
+          // deal with named parameter
+          // extract parameter name from key (from : until / or EOL) and
+          // value from path (same rules as key)
+          const keySize = this.getParamSize(keyReader);
+          const pathSize = this.getParamSize(pathReader);
+
+          // obtain key and value using calculated sizes
+          // for name: skip ':' by moving one character forward and compensate
+          // key size.
+          const name = keyReader.slice(keyReader.position + 1, keySize - 1);
+          const value = pathReader.slice(pathReader.position, pathSize);
+          // add this information to result
+          result.params[name] = value;
+          // advance readers positions
+          keyReader.position += keySize;
+          pathReader.position += pathSize;
+          break;
+        }
+        default:
+          // move to the next character
+          keyReader.next();
+          pathReader.next();
+      }
+    }
+
+    // check if we reached the end of the path & key
+    if (!pathReader.hasNext && !keyReader.hasNext) {
+      // check endpoint
+      if (node.payload !== null) return result.use(node);
+    }
+    // determine if remaining part of key and path are still the same
+    if (
+      keyReader.hasNext &&
+      pathReader.hasNext &&
+      (keyReader.current !== pathReader.current ||
+        keyReader.peekNext !== pathReader.peekNext)
+    ) {
+      // path and key differ, skipping
+      return;
+    }
+
+    // still path to walk, check for possible trailing slash or children
+    // nodes
+    if (pathReader.hasNext) {
+      // using trailing slash?
+      if (
+        node.key.length > 0 &&
+        pathReader.position + 1 === path.length &&
+        pathReader.current === "/"
+      ) {
+        return result.use(node);
+      }
+
+      // not found in current node, check inside children nodes
+      const newPath = pathReader.slice(pathReader.position);
+      for (const child of node.children) {
+        // check if child key is a named parameter, catch all or shares parts
+        // with new path
+        if (
+          child.isGlob ||
+          child.isNamed ||
+          this.isSharedKey(newPath, child.key)
+        ) {
+          // traverse branch to determine if valid
+          this._find(newPath, result, child);
+          if (result.isFound) {
+            // stop iterating over nodes
+            return;
+          } else {
+            // move to next child
+            continue;
+          }
+        }
+      }
+      // path differs from key, no use searching anymore
+      return;
+    }
+
+    // key still contains characters to walk
+    //   if key_reader.has_next?
+    if (keyReader.hasNext) {
+      // determine if there is just a trailing slash?
+      if (
+        keyReader.position + 1 === node.key.length &&
+        keyReader.current === "/"
+      ) {
+        return result.use(node);
+      }
+      // check if remaining part is catch all
+      //     if key_reader.pos < node.key.bytesize &&
+      //        ((key_reader.current_char == '/' && key_reader.peek_next_char == '*') ||
+      //        key_reader.current_char == '*')
+      if (
+        keyReader.position < node.key.length &&
+        ((keyReader.current === "/" && keyReader.peekNext === "*") ||
+          keyReader.current === "*")
+      ) {
+        // skip to '*' only if necessary
+        if (keyReader.current !== "*") keyReader.next();
+        // deal with catch all, but since there is nothing in the path
+        // return parameter as empty
+        const name = keyReader.slice(keyReader.position + 1);
+        result.params[name] = "";
+
+        return result.use(node);
+      }
+    }
+  }
+
+  /**
    # Internal: Compares *path* against *key* for differences until the
    # following criteria is met:
    #
@@ -485,13 +708,16 @@ export class Tree<T> {
     return char === "/" || char === ":" || char === "*";
   }
 
-  private getParamSize(path: string, start: number): number {
-    let index = start;
-    while (index < path.length) {
-      if (path[index] === "/") break;
-      index++;
+  private getParamSize(reader: Reader): number {
+    const position = reader.position;
+
+    while (reader.hasNext) {
+      if (reader.current === "/") break;
+      reader.next();
     }
-    return index - start;
+    const count = reader.position - position;
+    reader.position = position;
+    return count;
   }
 
   toJSON() {

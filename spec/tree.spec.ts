@@ -292,335 +292,280 @@ describe(Tree, () => {
     });
   });
 
-  // describe "#find" do
-  //   describe "a single node" do
-  //     it "does not find when using different path" do
-  //       tree = Tree(Symbol).new
-  //       tree.add "/about", :about
+  describe("#find", () => {
+    describe("a single node", () => {
+      it("does not find when using different path", () => {
+        const tree = new Tree();
+        tree.add("/about", Symbol.for(":about"));
+        const result = tree.find("/products");
+        expect(result.isFound).toBeFalsy();
+      });
+      it("finds when key and path matches", () => {
+        const tree = new Tree();
+        tree.add("/about", Symbol.for(":about"));
+        const result = tree.find("/about");
+        expect(result.isFound).toBeTruthy();
+        expect(result.payload).toBeTruthy();
+        expect(result.payload).toBe(Symbol.for(":about"));
+      });
+      it("finds when path contains trailing slash", () => {
+        const tree = new Tree();
+        tree.add("/about", Symbol.for(":about"));
+        const result = tree.find("/about/");
+        expect(result.isFound).toBeTruthy();
+      });
+      it("finds when key contains trailing slash", () => {
+        const tree = new Tree();
+        tree.add("/about", Symbol.for(":about"));
+        const result = tree.find("/about");
+        expect(result.isFound).toBeTruthy();
+        expect(result.payload).toBe(Symbol.for(":about"));
+      });
+    });
 
-  //       result = tree.find "/products"
-  //       result.found?.should be_false
-  //     end
+    describe("nodes with shared parent", () => {
+      it("finds matching path", () => {
+        const tree = new Tree();
+        tree.add("/", Symbol.for(":root"));
+        tree.add("/abc", Symbol.for(":abc"));
+        tree.add("/axyz", Symbol.for(":axyz"));
+        const result = tree.find("/abc");
+        expect(result.isFound).toBeTruthy();
+        expect(result.payload).toBe(Symbol.for(":abc"));
+      });
+      it("finds matching path across separator", () => {
+        const tree = new Tree();
+        tree.add("/products", Symbol.for(":products"));
+        tree.add("/product/new", Symbol.for(":product_new"));
+        const result = tree.find("/products");
+        expect(result.isFound).toBeTruthy();
+        expect(result.payload).toBe(Symbol.for(":products"));
+      });
+      it("finds matching path across parents", () => {
+        const tree = new Tree();
+        tree.add("/", Symbol.for(":root"));
+        tree.add("/admin/users", Symbol.for(":users"));
+        tree.add("/admin/products", Symbol.for(":products"));
+        tree.add("/blog/tags", Symbol.for(":tags"));
+        tree.add("/blog/articles", Symbol.for(":articles"));
+        const result = tree.find("/blog/tags/");
+        expect(result.isFound).toBeTruthy();
+        expect(result.payload).toBe(Symbol.for(":tags"));
+      });
+      it("do not find(when lookup for non-root key", () => {
+        const tree = new Tree();
+        tree.add("/prefix/", Symbol.for(":prefix"));
+        tree.add("/prefix/foo", Symbol.for(":foo"));
+        const result = tree.find("/foo");
+        expect(result.isFound).toBeFalsy();
+      });
+    });
 
-  //     it "finds when key and path matches" do
-  //       tree = Tree(Symbol).new
-  //       tree.add "/about", :about
+    describe("unicode nodes with shared parent", () => {
+      it("finds matching path", () => {
+        const tree = new Tree();
+        tree.add("/", Symbol.for(":root"));
+        tree.add("/日本語", Symbol.for(":japanese"));
+        tree.add("/日本日本語は難しい", Symbol.for(":japanese_is_difficult"));
+        const result = tree.find("/日本日本語は難しい/");
+        expect(result.isFound).toBeTruthy();
+        expect(result.payload).toBe(Symbol.for(":japanese_is_difficult"));
+      });
+    });
 
-  //       result = tree.find "/about"
-  //       result.found?.should be_true
-  //       result.payload?.should be_truthy
-  //       result.payload.should eq(:about)
-  //     end
-
-  //     it "finds when path contains trailing slash" do
-  //       tree = Tree(Symbol).new
-  //       tree.add "/about", :about
-
-  //       result = tree.find "/about/"
-  //       result.found?.should be_true
-  //     end
-
-  //     it "finds when key contains trailing slash" do
-  //       tree = Tree(Symbol).new
-  //       tree.add "/about/", :about
-
-  //       result = tree.find "/about"
-  //       result.found?.should be_true
-  //       result.payload.should eq(:about)
-  //     end
-  //   end
-
-  //   describe "nodes with shared parent" do
-  //     it "finds matching path" do
-  //       tree = Tree(Symbol).new
-  //       tree.add "/", :root
-  //       tree.add "/abc", :abc
-  //       tree.add "/axyz", :axyz
-
-  //       result = tree.find("/abc")
-  //       result.found?.should be_true
-  //       result.payload.should eq(:abc)
-  //     end
-
-  //     it "finds matching path across separator" do
-  //       tree = Tree(Symbol).new
-  //       tree.add "/products", :products
-  //       tree.add "/product/new", :product_new
-
-  //       result = tree.find("/products")
-  //       result.found?.should be_true
-  //       result.payload.should eq(:products)
-  //     end
-
-  //     it "finds matching path across parents" do
-  //       tree = Tree(Symbol).new
-  //       tree.add "/", :root
-  //       tree.add "/admin/users", :users
-  //       tree.add "/admin/products", :products
-  //       tree.add "/blog/tags", :tags
-  //       tree.add "/blog/articles", :articles
-
-  //       result = tree.find("/blog/tags/")
-  //       result.found?.should be_true
-  //       result.payload.should eq(:tags)
-  //     end
-
-  //     it "do not find when lookup for non-root key" do
-  //       tree = Tree(Symbol).new
-  //       tree.add "/prefix/", :prefix
-  //       tree.add "/prefix/foo", :foo
-
-  //       result = tree.find "/foo"
-  //       result.found?.should be_false
-  //     end
-  //   end
-
-  //   describe "unicode nodes with shared parent" do
-  //     it "finds matching path" do
-  //       tree = Tree(Symbol).new
-  //       tree.add "/", :root
-  //       tree.add "/日本語", :japanese
-  //       tree.add "/日本日本語は難しい", :japanese_is_difficult
-
-  //       result = tree.find("/日本日本語は難しい/")
-  //       result.found?.should be_true
-  //       result.payload.should eq(:japanese_is_difficult)
-  //     end
-  //   end
-
-  //   describe "dealing with catch all" do
-  //     it "finds matching path" do
-  //       tree = Tree(Symbol).new
-  //       tree.add "/", :root
-  //       tree.add "/*filepath", :all
-  //       tree.add "/about", :about
-
-  //       result = tree.find("/src/file.png")
-  //       result.found?.should be_true
-  //       result.payload.should eq(:all)
-  //     end
-
-  //     it "returns catch all in parameters" do
-  //       tree = Tree(Symbol).new
-  //       tree.add "/", :root
-  //       tree.add "/*filepath", :all
-  //       tree.add "/about", :about
-
-  //       result = tree.find("/src/file.png")
-  //       result.found?.should be_true
-  //       result.params.has_key?("filepath").should be_true
-  //       result.params["filepath"].should eq("src/file.png")
-  //     end
-
-  //     it "returns optional catch all after slash" do
-  //       tree = Tree(Symbol).new
-  //       tree.add "/", :root
-  //       tree.add "/search/*extra", :extra
-
-  //       result = tree.find("/search")
-  //       result.found?.should be_true
-  //       result.params.has_key?("extra").should be_true
-  //       result.params["extra"].empty?.should be_true
-  //     end
-
-  //     it "returns optional catch all by globbing" do
-  //       tree = Tree(Symbol).new
-  //       tree.add "/members*trailing", :members_catch_all
-
-  //       result = tree.find("/members")
-  //       result.found?.should be_true
-  //       result.params.has_key?("trailing").should be_true
-  //       result.params["trailing"].empty?.should be_true
-  //     end
-
-  //     it "does not find when catch all is not full match" do
-  //       tree = Tree(Symbol).new
-  //       tree.add "/", :root
-  //       tree.add "/search/public/*query", :search
-
-  //       result = tree.find("/search")
-  //       result.found?.should be_false
-  //     end
-
-  //     it "does not find when path search has been exhausted" do
-  //       tree = Tree(Symbol).new
-  //       tree.add "/members/*trailing", :members_catch_all
-
-  //       result = tree.find("/members2")
-  //       result.found?.should be_false
-  //     end
-
-  //     it "does prefer specific path over catch all if both are present" do
-  //       tree = Tree(Symbol).new
-  //       tree.add "/members", :members
-  //       tree.add "/members*trailing", :members_catch_all
-
-  //       result = tree.find("/members")
-  //       result.found?.should be_true
-  //       result.payload.should eq(:members)
-  //     end
-
-  //     it "does prefer catch all over specific key with partially shared key" do
-  //       tree = Tree(Symbol).new
-  //       tree.add "/orders/*anything", :orders_catch_all
-  //       tree.add "/orders/closed", :closed_orders
-
-  //       result = tree.find("/orders/cancelled")
-  //       result.found?.should be_true
-  //       result.payload.should eq(:orders_catch_all)
-  //       result.params.has_key?("anything").should be_true
-  //       result.params["anything"].should eq("cancelled")
-  //     end
-
-  //     it "does prefer root catch all over specific partially shared key" do
-  //       tree = Tree(Symbol).new
-  //       tree.add "/*anything", :root_catch_all
-  //       tree.add "/robots.txt", :robots
-  //       tree.add "/resources", :resources
-
-  //       result = tree.find("/reviews")
-  //       result.found?.should be_true
-  //       result.payload.should eq(:root_catch_all)
-  //       result.params.has_key?("anything").should be_true
-  //       result.params["anything"].should eq("reviews")
-  //     end
-  //   end
-
-  //   describe "dealing with named parameters" do
-  //     it "finds matching path" do
-  //       tree = Tree(Symbol).new
-  //       tree.add "/", :root
-  //       tree.add "/products", :products
-  //       tree.add "/products/:id", :product
-  //       tree.add "/products/:id/edit", :edit
-
-  //       result = tree.find("/products/10")
-  //       result.found?.should be_true
-  //       result.payload.should eq(:product)
-  //     end
-
-  //     it "does not find partial matching path" do
-  //       tree = Tree(Symbol).new
-  //       tree.add "/", :root
-  //       tree.add "/products", :products
-  //       tree.add "/products/:id/edit", :edit
-
-  //       result = tree.find("/products/10")
-  //       result.found?.should be_false
-  //     end
-
-  //     it "returns named parameters in result" do
-  //       tree = Tree(Symbol).new
-  //       tree.add "/", :root
-  //       tree.add "/products", :products
-  //       tree.add "/products/:id", :product
-  //       tree.add "/products/:id/edit", :edit
-
-  //       result = tree.find("/products/10/edit")
-  //       result.found?.should be_true
-  //       result.params.has_key?("id").should be_true
-  //       result.params["id"].should eq("10")
-  //     end
-
-  //     it "returns unicode values in parameters" do
-  //       tree = Tree(Symbol).new
-  //       tree.add "/", :root
-  //       tree.add "/language/:name", :language
-  //       tree.add "/language/:name/about", :about
-
-  //       result = tree.find("/language/日本語")
-  //       result.found?.should be_true
-  //       result.params.has_key?("name").should be_true
-  //       result.params["name"].should eq("日本語")
-  //     end
-
-  //     it "does prefer specific path over named parameters one if both are present" do
-  //       tree = Tree(Symbol).new
-  //       tree.add "/tag-edit/:tag", :edit_tag
-  //       tree.add "/tag-edit2", :alternate_tag_edit
-
-  //       result = tree.find("/tag-edit2")
-  //       result.found?.should be_true
-  //       result.payload.should eq(:alternate_tag_edit)
-  //     end
-
-  //     it "does prefer named parameter over specific key with partially shared key" do
-  //       tree = Tree(Symbol).new
-  //       tree.add "/orders/:id", :specific_order
-  //       tree.add "/orders/closed", :closed_orders
-
-  //       result = tree.find("/orders/10")
-  //       result.found?.should be_true
-  //       result.payload.should eq(:specific_order)
-  //       result.params.has_key?("id").should be_true
-  //       result.params["id"].should eq("10")
-  //     end
-  //   end
-
-  //   describe "dealing with multiple named parameters" do
-  //     it "finds matching path" do
-  //       tree = Tree(Symbol).new
-  //       tree.add "/", :root
-  //       tree.add "/:section/:page", :static_page
-
-  //       result = tree.find("/about/shipping")
-  //       result.found?.should be_true
-  //       result.payload.should eq(:static_page)
-  //     end
-
-  //     it "returns named parameters in result" do
-  //       tree = Tree(Symbol).new
-  //       tree.add "/", :root
-  //       tree.add "/:section/:page", :static_page
-
-  //       result = tree.find("/about/shipping")
-  //       result.found?.should be_true
-
-  //       result.params.has_key?("section").should be_true
-  //       result.params["section"].should eq("about")
-
-  //       result.params.has_key?("page").should be_true
-  //       result.params["page"].should eq("shipping")
-  //     end
-  //   end
-
-  //   describe "dealing with both catch all and named parameters" do
-  //     it "finds matching path" do
-  //       tree = Tree(Symbol).new
-  //       tree.add "/", :root
-  //       tree.add "/*filepath", :all
-  //       tree.add "/products", :products
-  //       tree.add "/products/:id", :product
-  //       tree.add "/products/:id/edit", :edit
-  //       tree.add "/products/featured", :featured
-
-  //       result = tree.find("/products/1000")
-  //       result.found?.should be_true
-  //       result.payload.should eq(:product)
-
-  //       result = tree.find("/admin/articles")
-  //       result.found?.should be_true
-  //       result.payload.should eq(:all)
-  //       result.params["filepath"].should eq("admin/articles")
-
-  //       result = tree.find("/products/featured")
-  //       result.found?.should be_true
-  //       result.payload.should eq(:featured)
-  //       result.payload.should eq(:featured)
-  //     end
-  //   end
-
-  //   describe "dealing with named parameters and shared key" do
-  //     it "finds matching path" do
-  //       tree = Tree(Symbol).new
-  //       tree.add "/one/:id", :one
-  //       tree.add "/one-longer/:id", :two
-
-  //       result = tree.find "/one-longer/10"
-  //       result.found?.should be_true
-  //       result.payload.should eq(:two)
-  //       result.params["id"].should eq("10")
-  //     end
-  //   end
-  // end
+    describe("dealing with catch all", () => {
+      it("finds matching path", () => {
+        const tree = new Tree();
+        tree.add("/", Symbol.for(":root"));
+        tree.add("/*filepath", Symbol.for(":all"));
+        tree.add("/about", Symbol.for(":about"));
+        const result = tree.find("/src/file.png");
+        expect(result.isFound).toBeTruthy();
+        expect(result.payload).toBe(Symbol.for(":all"));
+      });
+      it("returns catch all in parameters", () => {
+        const tree = new Tree();
+        tree.add("/", Symbol.for(":root"));
+        tree.add("/*filepath", Symbol.for(":all"));
+        tree.add("/about", Symbol.for(":about"));
+        const result = tree.find("/src/file.png");
+        expect(result.isFound).toBeTruthy();
+        expect(result.params).toHaveProperty("filepath");
+        expect(result.params["filepath"]).toBe("src/file.png");
+      });
+      it("returns optional catch all after slash", () => {
+        const tree = new Tree();
+        tree.add("/", Symbol.for(":root"));
+        tree.add("/search/*extra", Symbol.for(":extra"));
+        const result = tree.find("/search");
+        expect(result.isFound).toBeTruthy();
+        expect(result.params).toHaveProperty("extra");
+        expect(result.params["extra"].length).toBe(0);
+      });
+      it("returns optional catch all by globbing", () => {
+        const tree = new Tree();
+        tree.add("/members*trailing", Symbol.for(":members_catch_all"));
+        const result = tree.find("/members");
+        expect(result.isFound).toBeTruthy();
+        expect(result.params).toHaveProperty("trailing");
+        expect(result.params["trailing"].length).toBe(0);
+      });
+      it("does not find(when catch all is not full match", () => {
+        const tree = new Tree();
+        tree.add("/", Symbol.for(":root"));
+        tree.add("/search/public/*query", Symbol.for(":search"));
+        const result = tree.find("/search");
+        expect(result.isFound).toBeFalsy();
+      });
+      it("does not find(when path search has been exhausted", () => {
+        const tree = new Tree();
+        tree.add("/members/*trailing", Symbol.for(":members_catch_all"));
+        const result = tree.find("/members2");
+        expect(result.isFound).toBeFalsy();
+      });
+      it("does prefer specific path over catch all if both are present", () => {
+        const tree = new Tree();
+        tree.add("/members", Symbol.for(":members"));
+        tree.add("/members*trailing", Symbol.for(":members_catch_all"));
+        const result = tree.find("/members");
+        expect(result.isFound).toBeTruthy();
+        expect(result.payload).toBe(Symbol.for(":members"));
+      });
+      it("does prefer catch all over specific key with partially shared key", () => {
+        const tree = new Tree();
+        tree.add("/orders/*anything", Symbol.for(":orders_catch_all"));
+        tree.add("/orders/closed", Symbol.for(":closed_orders"));
+        const result = tree.find("/orders/cancelled");
+        expect(result.isFound).toBeTruthy();
+        expect(result.payload).toBe(Symbol.for(":orders_catch_all"));
+        expect(result.params).toHaveProperty("anything");
+        expect(result.params["anything"]).toBe("cancelled");
+      });
+      it("does prefer root catch all over specific partially shared key", () => {
+        const tree = new Tree();
+        tree.add("/*anything", Symbol.for(":root_catch_all"));
+        tree.add("/robots.txt", Symbol.for(":robots"));
+        tree.add("/resources", Symbol.for(":resources"));
+        const result = tree.find("/reviews");
+        expect(result.isFound).toBeTruthy();
+        expect(result.payload).toBe(Symbol.for(":root_catch_all"));
+        expect(result.params).toHaveProperty("anything");
+        expect(result.params["anything"]).toBe("reviews");
+      });
+    });
+    describe("dealing with named parameters", () => {
+      it("finds matching path", () => {
+        const tree = new Tree();
+        tree.add("/", Symbol.for(":root"));
+        tree.add("/products", Symbol.for(":products"));
+        tree.add("/products/:id", Symbol.for(":product"));
+        tree.add("/products/:id/edit", Symbol.for(":edit"));
+        const result = tree.find("/products/10");
+        expect(result.isFound).toBeTruthy();
+        expect(result.payload).toBe(Symbol.for(":product"));
+      });
+      it("does not find partial matching path", () => {
+        const tree = new Tree();
+        tree.add("/", Symbol.for(":root"));
+        tree.add("/products", Symbol.for(":products"));
+        tree.add("/products/:id/edit", Symbol.for(":edit"));
+        const result = tree.find("/products/10");
+        expect(result.isFound).toBeFalsy();
+      });
+      it("returns named parameters in result", () => {
+        const tree = new Tree();
+        tree.add("/", Symbol.for(":root"));
+        tree.add("/products", Symbol.for(":products"));
+        tree.add("/products/:id", Symbol.for(":product"));
+        tree.add("/products/:id/edit", Symbol.for(":edit"));
+        const result = tree.find("/products/10/edit");
+        expect(result.isFound).toBeTruthy();
+        expect(result.params).toHaveProperty("id");
+        expect(result.params["id"]).toBe("10");
+      });
+      it("returns unicode values in parameters", () => {
+        const tree = new Tree();
+        tree.add("/", Symbol.for(":root"));
+        tree.add("/language/:name", Symbol.for(":language"));
+        tree.add("/language/:name/about", Symbol.for(":about"));
+        const result = tree.find("/language/日本語");
+        expect(result.isFound).toBeTruthy();
+        expect(result.params).toHaveProperty("name");
+        expect(result.params["name"]).toBe("日本語");
+        expect(result.payload).toBe(Symbol.for(":language"));
+      });
+      it("does prefer specific path over named parameters one if both are present", () => {
+        const tree = new Tree();
+        tree.add("/tag-edit/:tag", Symbol.for(":edit_tag"));
+        tree.add("/tag-edit2", Symbol.for(":alternate_tag_edit"));
+        const result = tree.find("/tag-edit2");
+        expect(result.isFound).toBeTruthy();
+        expect(result.payload).toBe(Symbol.for(":alternate_tag_edit"));
+      });
+      it("does prefer named parameter over specific key with partially shared key", () => {
+        const tree = new Tree();
+        tree.add("/orders/:id", Symbol.for(":specific_order"));
+        tree.add("/orders/closed", Symbol.for(":closed_orders"));
+        const result = tree.find("/orders/10");
+        expect(result.isFound).toBeTruthy();
+        expect(result.payload).toBe(Symbol.for(":specific_order"));
+        expect(result.params).toHaveProperty("id");
+        expect(result.params["id"]).toBe("10");
+      });
+    });
+    describe("dealing with multiple named parameters", () => {
+      it("finds matching path", () => {
+        const tree = new Tree();
+        tree.add("/", Symbol.for(":root"));
+        tree.add("/:section/:page", Symbol.for(":static_page"));
+        const result = tree.find("/about/shipping");
+        expect(result.isFound).toBeTruthy();
+        expect(result.payload).toBe(Symbol.for(":static_page"));
+      });
+      it("returns named parameters in result", () => {
+        const tree = new Tree();
+        tree.add("/", Symbol.for(":root"));
+        tree.add("/:section/:page", Symbol.for(":static_page"));
+        const result = tree.find("/about/shipping");
+        expect(result.isFound).toBeTruthy();
+        expect(result.params).toHaveProperty("section");
+        expect(result.params["section"]).toBe("about");
+        expect(result.params).toHaveProperty("page");
+        expect(result.params["page"]).toBe("shipping");
+      });
+    });
+    describe("dealing with both catch all and named parameters", () => {
+      it("finds matching path", () => {
+        const tree = new Tree();
+        tree.add("/", Symbol.for(":root"));
+        tree.add("/*filepath", Symbol.for(":all"));
+        tree.add("/products", Symbol.for(":products"));
+        tree.add("/products/:id", Symbol.for(":product"));
+        tree.add("/products/:id/edit", Symbol.for(":edit"));
+        tree.add("/products/featured", Symbol.for(":featured"));
+        let result = tree.find("/products/1000");
+        expect(result.isFound).toBeTruthy();
+        expect(result.payload).toBe(Symbol.for(":product"));
+        result = tree.find("/admin/articles");
+        expect(result.isFound).toBeTruthy();
+        expect(result.payload).toBe(Symbol.for(":all"));
+        expect(result.params["filepath"]).toBe("admin/articles");
+        result = tree.find("/products/featured");
+        expect(result.isFound).toBeTruthy();
+        expect(result.payload).toBe(Symbol.for(":featured"));
+      });
+    });
+    describe("dealing with named parameters and shared key", () => {
+      it("finds matching path", () => {
+        const tree = new Tree();
+        tree.add("/one/:id", Symbol.for(":one"));
+        tree.add("/one-longer/:id", Symbol.for(":two"));
+        const result = tree.find("/one-longer/10");
+        expect(result.isFound).toBeTruthy();
+        expect(result.payload).toBe(Symbol.for(":two"));
+        expect(result.params).toHaveProperty("id");
+        expect(result.params["id"]).toBe("10");
+      });
+    });
+  });
 });
