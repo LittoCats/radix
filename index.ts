@@ -58,20 +58,12 @@ export class Reader {
     this._position = Math.max(0, Math.min(pos, this._value.length));
   }
 
-  public get value() {
-    return this._value;
-  }
-
   public slice(offset?: number, size?: number) {
     const start: number | undefined = offset;
     let end: number | undefined = undefined;
     if (start !== undefined && size !== undefined) end = start + size;
 
     return this._value.slice(start, end);
-  }
-
-  public get size() {
-    return this._value.length;
   }
 }
 
@@ -426,7 +418,7 @@ export class Tree<T> {
       const swapPayload = node.payload ? node.payload : undefined;
 
       const newNode = new Node<T>(newKey, swapPayload);
-      newNode.children.push(...node.children);
+      Array.prototype.push.apply(newNode.children, node.children);
 
       // # clear payload and children (this is no longer and endpoint)
       node.payload = null;

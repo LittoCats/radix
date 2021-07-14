@@ -1,9 +1,10 @@
 {
-  "name": "radix",
+  "name": "radix-tree",
   "version": "0.0.1",
   "description": "[Radix tree](https://en.wikipedia.org/wiki/Radix_tree) implementation for nodejs",
   "main": "index.js",
   "scripts": {
+    "build": "tsc --build tsconfig.json && babel --out-file index.js --source-maps true --no-comments --retain-lines --minified index.ts",
     "test": "jest"
   },
   "keywords": [
@@ -11,8 +12,9 @@
     "tree"
   ],
   "author": "程巍巍",
-  "license": "WTFPL",
+  "license": "MIT",
   "devDependencies": {
+    "@babel/cli": "^7.14.5",
     "@babel/node": "^7.14.7",
     "@babel/preset-env": "^7.14.7",
     "@babel/preset-typescript": "^7.14.5",
@@ -26,5 +28,11 @@
     "jest": "^27.0.6",
     "prettier": "2.3.2",
     "typescript": "^4.3.5"
-  }
+  },
+  "files": [
+    "index.ts",
+    "index.d.ts",
+    "index.js",
+    "index.js.map"
+  ]
 }
