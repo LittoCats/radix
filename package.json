@@ -1,5 +1,5 @@
 {
-  "name": "radix-tree",
+  "name": "@littocats/radix",
   "version": "0.0.1",
   "description": "[Radix tree](https://en.wikipedia.org/wiki/Radix_tree) implementation for nodejs",
   "main": "index.js",
