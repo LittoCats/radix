@@ -234,6 +234,31 @@ export class Node<T> {
     Object.setPrototypeOf(node, Node.prototype);
     return node as any;
   }
+
+  toArray(): any {
+    const value = this.value;
+    return [
+      value.key,
+      value.kind,
+      value.payload,
+      value.priority,
+      value.placeholder,
+      value.children.map((node) => node.toArray()),
+    ];
+  }
+
+  static fromArray<T>(data: any): Node<T> {
+    const [key, kind, payload, priority, placeholder, childrenData] = data;
+    const children = childrenData.map((data: any) => Node.fromArray(data));
+    return Node.fromJSON({
+      key,
+      kind,
+      payload,
+      priority,
+      placeholder,
+      children,
+    });
+  }
 }
 
 /**
@@ -730,6 +755,14 @@ export class Tree<T> {
     const tree = {_root: Node.fromJSON(data.root)};
     Object.setPrototypeOf(tree, Tree.prototype);
     return tree as any;
+  }
+
+  toArray() {
+    return [this.root.toArray()];
+  }
+
+  static fromArray<T>(data: any): Tree<T> {
+    return this.fromJSON({ root: Node.fromArray(data[0]) });
   }
 }
 
