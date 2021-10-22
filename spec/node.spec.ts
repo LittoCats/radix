@@ -61,19 +61,6 @@ describe(Node, () => {
     });
   });
 
-  describe("#normal?", () => {
-    it("returns true when key does not contain named or glob parameters", () => {
-      let node = new Node("a");
-      expect(node.isNormal).toBe(true);
-
-      node = new Node(":query");
-      expect(node.isNormal).toBe(false);
-
-      node = new Node("*path");
-      expect(node.isNormal).toBe(false);
-    });
-  });
-
   describe("#payload", () => {
     it("accepts any form of payload", function () {
       const payload = Symbol("payload");

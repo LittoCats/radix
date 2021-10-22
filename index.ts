@@ -86,6 +86,12 @@ export class Node<T> {
     key: "",
   };
 
+  constructor(key: string, payload: T | null = null, placeholder = false) {
+    this.key = key;
+    this.value.payload = payload;
+    this.value.placeholder = placeholder;
+  }
+
   public get placeholder(): boolean {
     return this.value.placeholder;
   }
@@ -201,11 +207,7 @@ export class Node<T> {
     return Kind.Glob === this.value.kind;
   }
 
-  constructor(key: string, payload: T | null = null, placeholder = false) {
-    this.key = key;
-    this.value.payload = payload;
-    this.value.placeholder = placeholder;
-  }
+
 
   sort() {
     this.value.children.sort(Node.Comparator);
@@ -222,7 +224,15 @@ export class Node<T> {
   }
 
   toJSON(): any {
-    return this.value;
+    return Object.assign({}, this.value, {children: this.value.children.map(node=> node.toJSON())});
+  }
+
+  static fromJSON<T>(data: any): Node<T> {
+    const node = {value: Object.assign({}, data, {
+      children: (data.children || []).map(Node.fromJSON)
+    })};
+    Object.setPrototypeOf(node, Node.prototype);
+    return node as any;
   }
 }
 
@@ -619,18 +629,18 @@ export class Tree<T> {
   }
 
   /**
-   # Internal: Compares *path* against *key* for differences until the
-   # following criteria is met:
-   #
-   # - End of *path* or *key* is reached.
-   # - A separator (`/`) is found.
-   # - A character between *path* or *key* differs
-   #
-   # ```
-   # _same_key?("foo", "bar")         # => false (mismatch at 1st character)
-   # _same_key?("foo/bar", "foo/baz") # => true (only `foo` is compared)
-   # _same_key?("zipcode", "zip")     # => false (`zip` is shorter)
-   # ```
+   * Internal: Compares *path* against *key* for differences until the
+   * following criteria is met:
+   *
+   * - End of *path* or *key* is reached.
+   * - A separator (`/`) is found.
+   * - A character between *path* or *key* differs
+   *
+   * ```
+   * _same_key?("foo", "bar")         # => false (mismatch at 1st character)
+   * _same_key?("foo/bar", "foo/baz") # => true (only `foo` is compared)
+   * _same_key?("zipcode", "zip")     # => false (`zip` is shorter)
+   * ```
    */
   private isSameKey(path: string, key: string): boolean {
     let different = false;
@@ -652,20 +662,20 @@ export class Tree<T> {
   }
 
   /**
-   // Internal: Compares *path* against *key* for equality until one of the
-   // following criterias is met:
-   //
-   // - End of *path* or *key* is reached.
-   // - A separator (`/`) is found.
-   // - A named parameter (`:`) or catch all (`*`) is found.
-   // - A character in *path* differs from *key*
-   //
-   // ```
-   // _shared_key?("foo", "bar")         # => false (mismatch at 1st character)
-   // _shared_key?("foo/bar", "foo/baz") # => true (only `foo` is compared)
-   // _shared_key?("zipcode", "zip")     # => true (only `zip` is compared)
-   // _shared_key?("s", "/new")          # => false (1st character is a separator)
-   // ```
+   * Internal: Compares *path* against *key* for equality until one of the
+   * following criterias is met:
+   *
+   * - End of *path* or *key* is reached.
+   * - A separator (`/`) is found.
+   * - A named parameter (`:`) or catch all (`*`) is found.
+   * - A character in *path* differs from *key*
+   *
+   * ```
+   * _shared_key?("foo", "bar")         # => false (mismatch at 1st character)
+   * _shared_key?("foo/bar", "foo/baz") # => true (only `foo` is compared)
+   * _shared_key?("zipcode", "zip")     # => true (only `zip` is compared)
+   * _shared_key?("s", "/new")          # => false (1st character is a separator)
+   * ```
    */
   private isSharedKey(path: string, key: string): boolean {
     let index = 0;
@@ -690,11 +700,11 @@ export class Tree<T> {
   }
 
   /**
-   # Internal: allow inline comparison of *char* against 3 defined markers:
-   #
-   # - Path separator (`/`)
-   # - Named parameter (`:`)
-   # - Catch all (`*`)
+   * Internal: allow inline comparison of *char* against 3 defined markers:
+   *
+   * - Path separator (`/`)
+   * - Named parameter (`:`)
+   * - Catch all (`*`)
    */
   private isMarker(char: string): boolean {
     return char === "/" || char === ":" || char === "*";
@@ -714,6 +724,12 @@ export class Tree<T> {
 
   toJSON() {
     return { root: this.root.toJSON() };
+  }
+
+  static fromJSON<T>(data: any): Tree<T> {
+    const tree = {_root: Node.fromJSON(data.root)};
+    Object.setPrototypeOf(tree, Tree.prototype);
+    return tree as any;
   }
 }
 
